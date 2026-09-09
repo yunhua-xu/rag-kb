@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RAG项目 · 大白话介绍</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; background: #faf6f0; color: #1f2937; padding: 20px 16px 60px; max-width: 760px; margin: 0 auto; font-size: 19px; line-height: 1.85; }
+  h1 { font-size: 27px; text-align: center; color: #111827; margin-bottom: 4px; font-weight: 800; }
+  .subtitle { text-align: center; color: #6b7280; font-size: 16px; margin-bottom: 12px; }
+  h2 { font-size: 22px; color: #fff; border-radius: 10px; padding: 9px 16px; margin: 30px 0 12px; font-weight: 700; }
+  .c1 { background: #16a085; } .c2 { background: #3498db; } .c3 { background: #e67e22; } .c4 { background: #8e44ad; } .c5 { background: #c0392b; }
+  .card { background: #fff; border-radius: 14px; padding: 13px 16px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(17,24,39,.08); font-size: 16.5px; }
+  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(17,24,39,.08); }
+  th { background: #34495e; color: #fff; padding: 8px 10px; text-align: left; font-size: 15px; }
+  td { padding: 8px 10px; border-bottom: 1px solid #f3f4f6; font-size: 15px; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tbody tr:nth-child(even) { background: #f8fafc; }
+  .note { background: #fef3c7; border-radius: 12px; padding: 12px 16px; font-size: 16px; color: #78350f; line-height: 1.8; }
+  .warn { background: #eef2f7; border-radius: 12px; padding: 12px 16px; font-size: 15.5px; color: #374151; line-height: 1.8; }
+  .good { background: #e8f5e9; border-radius: 12px; padding: 12px 16px; font-size: 16px; color: #1b5e20; line-height: 1.8; }
+  .flow { background: #3a3d5c; color: #f0f2f7; padding: 13px 16px; border-radius: 10px; font-size: 14.5px; line-height: 2; margin: 9px 0; white-space: pre-wrap; }
+  .big { font-size: 20px; }
+</style>
+</head>
+<body>
+
+<h1>🏗️ RAG 项目 · 大白话介绍</h1>
+<p class="subtitle">面试 / 讲给别人听 / 自己复盘，都照这个网页说</p>
+
+<h2 class="c1">① 一句话版</h2>
+<div class="card big">"我搭了个<b>文档图书馆</b>——把 PDF、Word 扔进去，你问它问题，它不光回答你，还告诉你<b>在哪本书哪一页</b>找到的。"</div>
+
+<h2 class="c2">② 总比喻：你的项目 = 一家图书馆</h2>
+<div class="warn">把整个系统想成<b>图书馆</b>，每个文件就是馆里的一个岗位。</div>
+<table>
+<thead><tr><th>岗位</th><th>对应文件</th><th>干嘛的</th></tr></thead>
+<tbody>
+<tr><td>收书员</td><td>loader.py</td><td>收书：PDF/Word/TXT 都收，统一切成能读的纸</td></tr>
+<tr><td>裁纸员</td><td>splitter.py</td><td>把一本厚书裁成一页页小卡片（每页约512字）</td></tr>
+<tr><td>档案管理员</td><td>ingest.py</td><td>每张卡片抄一份送进档案柜，柜子记住每张"字面"和"意思"</td></tr>
+<tr><td>档案柜</td><td>chroma_data\ 文件夹<br>（背后是 chromadb 库，pip 装的）</td><td>存卡片的地方，能按"意思"和"关键词"两头找</td></tr>
+<tr><td>检索员</td><td>retriever.py</td><td>你问"啥是RAG"，它同时按意思找 + 按关键词找，两路结果合并</td></tr>
+<tr><td>精筛员</td><td>reranker.py</td><td>找到20张先粗筛，再精排挑最像的5张</td></tr>
+<tr><td>抄写员</td><td>generator.py</td><td>把5张卡片抄给 DeepSeek，让它照着卡片写答案</td></tr>
+<tr><td>前台</td><td>main.py</td><td>对外开门：收你上传的书、接你的问题、还你答案</td></tr>
+<tr><td>网页窗口</td><td>ui.py</td><td>前台门面，你在浏览器看到的聊天框</td></tr>
+<tr><td>保安</td><td>robustness.py</td><td>哪坏了重试、兜底，不让系统崩</td></tr>
+<tr><td>质检员</td><td>judge.py</td><td>出20道题考自己，AI 当裁判打分</td></tr>
+</tbody>
+</table>
+
+<div class="warn"><b>⚠ 别找"ChromaDB 这个文件"——不存在，也不用建。</b><br>
+ChromaDB 是 <b>pip 装进来的库</b>（一个第三方包），代码里写 <b>import chromadb</b> 来用它，它不是你要写的 .py 文件。<br>
+它在你电脑上留下的"档案柜"实体，是跑完 ingest.py 后<b>自动生成</b>的 <b>chroma_data\</b> 文件夹——里面的 chroma.sqlite3 存的就是那 3 条向量数据（该文件夹已被 .gitignore 排除，不会传 GitHub）。</div>
+
+<h2 class="c3">③ 两条链路，大白话讲</h2>
+
+<div class="card"><b>入库链路 = 收书进柜（每份文档只走一次）</b>
+你上传一份 PDF → 收书员拆开 → 裁纸员切成小卡片 → 档案管理员把每张卡片抄两份（一份原文、一份"意思"编码）塞进档案柜 → 完事，书在柜里了。</div>
+<div class="flow">上传文档 → loader.py 读文件（PDF/Word/TXT）
+  → splitter.py 切成小块
+  → 智谱 embedding-2 算"意思"向量
+  → ingest.py 存进 ChromaDB</div>
+
+<div class="card"><b>问答链路 = 客人找书（每次提问都走）</b>
+你问"RAG 是什么" → 前台转给检索员 → 检索员从档案柜两头翻：按<b>意思</b>（你问的"检索增强"，柜里有张卡片也是这意思）＋ 按<b>关键词</b>（"RAG"字母原文匹配）→ 找到最像的 5 张 → 抄写员把这 5 张塞给 DeepSeek → DeepSeek 只看着 5 张卡片答题 → 前台把答案还你，还附带"来源：第2本书第3页"。</div>
+<div class="flow">用户提问
+  ↓ ui.py（网页）或 curl 发起
+  ↓ POST /api/ask
+FastAPI main.py 接收
+  ↓ 交给检索
+retriever.py 双路召回：
+  ① 向量路：问题→智谱embedding-2→ChromaDB 按"意思"查
+  ② 关键词路：jieba分词 + BM25 按"字面"查
+  ↓ 两路归一到0-1 → 加权融合 → 去重保序 → Top-k
+  ↓（可选 reranker.py：粗找20条 → 精排top5）
+generator.py 拼Prompt：资料 + 问题
+  ↓
+DeepSeek 生成（只根据资料回答，没有就说不知道）
+  ↓ 返回 answer + sources（来源文件名+块号/页码）
+  ↓ 界面显示答句下方列出来源</div>
+
+<h2 class="c4">④ 三个关键考点（面试/被追问先背）</h2>
+<div class="card"><b>1️⃣ 为什么要切块？</b><br>
+整本书一次性塞给 AI：太长、塞不下、也不精准。切成小卡片，只挑跟问题最相关的几张，<b>精准又省token（省钱）</b>。</div>
+<div class="card"><b>2️⃣ 为什么双路检索？</b><br>
+单靠"意思"找，遇到专业缩写（如 RAG）会抓瞎；单靠"关键词"找，换个说法就找不到。<b>两路互补</b>：意思近 + 字面像都捞上来，融合排序。</div>
+<div class="card"><b>3️⃣ 为什么答案要带来源？</b><br>
+让 AI 照卡片答、不瞎编（防幻觉），出错了能<b>顺着来源去核对原文</b>——这是企业级系统跟"聊天机器人"的根本区别。</div>
+
+<h2 class="c5">⑤ 别人问"你项目难点是什么"</h2>
+<div class="good">"最难的是<b>中文检索</b>。英文按空格分词就行，中文得先用 jieba 分词（'向量数据库存向量'→'向量/数据库/存/向量'）。另外要控制答案不瞎编——我的做法是 prompt 里写死'只根据资料回答，资料里没有就说不知道'，并且返回来源让用户能核对。"</div>
+
+<h2 class="c1">⑥ 自测（能讲出来才算过）</h2>
+<div class="note"><b>测试：</b>不看上面，用图书馆比喻把"入库链路"和"问答链路"各讲一遍。能讲出来 = Day29 真过了。讲不出来 = 回到②③再看一遍。<br><br>
+<b>更高要求：</b>用英文项目名讲一遍（loader/splitter/ingest/retriever/generator）——面试可能让你画流程图。</div>
+
+</body>
+</html>

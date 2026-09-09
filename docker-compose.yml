@@ -1,0 +1,15 @@
+services:    # ★定义所有容器
+  api:    # 服务1：API
+    build: .    # 用当前目录的Dockerfile构建
+    ports:    # 端口映射
+      - "8000:8000"    # ★宿主机8000 → 容器8000
+    env_file:    # 环境变量
+      - .env    # 从.env读密钥
+    depends_on:    # 依赖
+      - chroma    # 先起chroma再起api
+  chroma:    # 服务2：向量库
+    image: ghcr.io/chroma-core/chroma:latest    # 官方镜像
+    volumes:    # ★数据卷
+      - ./chroma_data:/data    # 本地目录挂进容器（数据不丢）
+
+# 启动：docker compose up -d    停止：docker compose down

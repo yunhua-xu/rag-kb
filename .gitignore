@@ -1,0 +1,12 @@
+# 密钥 - 绝不能传 GitHub
+.env
+
+# 向量库数据（本地生成，别人 clone 后自己建）
+chroma_data/
+
+# Python 缓存
+__pycache__/
+*.pyc
+
+# 系统文件
+.DS_Store

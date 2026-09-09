@@ -1,0 +1,32 @@
+# RAG知识库系统 - 依赖清单（Day29 先装前4个，后面的用到再装）
+# 安装：pip install -r requirements.txt
+
+# --- Web 框架 ---
+fastapi
+uvicorn[standard]
+
+# --- LangChain 加载/切分 ---
+langchain-community
+langchain-text-splitters
+
+# --- 向量库 ---
+chromadb
+
+# --- 混合检索 ---
+rank-bm25
+jieba
+
+# --- 配置与请求 ---
+python-dotenv
+requests
+
+# --- 文档加载底层依赖 ---
+pypdf
+docx2txt
+
+# --- 界面 ---
+streamlit
+
+# --- 加分项（用到再装）---
+# flagembedding          # Day34 重排
+# pytesseract            # Day38 OCR（还要装 tesseract 程序本体）
