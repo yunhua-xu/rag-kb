@@ -1,4 +1,4 @@
-# main.py = FastAPI 主入口：把"检索+生成"和"上传入库"做成接口给网页/curl 调（Day29空壳→Day36补两个端点）
+# main.py = FastAPI 主入口：把"检索+生成"和"上传入库"做成接口，供网页 / curl / 其他程序调用
 import os    # os模块（拼路径、删临时文件）
 import tempfile    # 临时文件（上传先落盘再读）
 from fastapi import FastAPI    # FastAPI主类

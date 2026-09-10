@@ -10,7 +10,7 @@ def call_llm(prompt, retries=3): # ★带重试的调用（防超时闪退）
     for i in range(retries): # 最多试3次
         try: # ★包住可能失败的操作
             resp = client.chat.completions.create( # 调模型
-                model="deepseek-v4-flash", # 模型
+                model="deepseek-flash", # ★模型：官方接口ID（不是别名、不是展示名）
                 messages=[{"role": "user", "content": prompt}], # 内容
                 timeout=30 # ★30秒超时，不设会一直等
             ) # 结束

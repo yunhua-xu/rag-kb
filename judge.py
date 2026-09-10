@@ -1,4 +1,4 @@
-# 评测模块：LLM-as-Judge 自动打分（Day24 移植进项目）
+# 评测模块：LLM-as-Judge 自动打分（让大模型当评委，给问答质量打分，用于评估检索+生成效果）
 import os# os模块（读env）
 import re# ★正则：抓AI回答里的数字
 from dotenv import load_dotenv# .env
@@ -12,7 +12,7 @@ RUBRIC = "你是评委。回答正确结构清晰给5分，基本正确有缺失
 def judge_answer(q, answer):# ★给一条问答打分
     prompt = RUBRIC + f"\n\n问题：{q}\n\n回答：{answer}"# 标准+题目+答案拼一起
     resp = client.chat.completions.create(# 让AI当评委
-        model="deepseek-v4-flash",# 模型
+        model="deepseek-flash",# ★模型：官方接口ID（不是别名、不是展示名）
         messages=[{"role": "user", "content": prompt}]# 发prompt
     )# 结束
     return resp.choices[0].message.content# 返回分数文本（可能是"4分""5."这种带字的）
