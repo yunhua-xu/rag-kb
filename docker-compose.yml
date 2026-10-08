@@ -1,15 +1,76 @@
-services:    # ★定义所有容器
-  api:    # 服务1：API
-    build: .    # 用当前目录的Dockerfile构建
+# docker-compose.yml —— 一条命令把"整个 RAG 知识库"拉起来
+# 用法：docker compose up -d       停止：docker compose down
+# 注意：新版 compose 已经不需要写 version: "3" 那一行，写了会有一条黄色警告
+# ★ 2026-09-27 订正过四处（原来照这份文件跑必然失败或悄悄出错），改了什么见文件末尾
+
+services:    # ★services = 服务列表（每个服务 = 一个容器）
+  api:    # 服务1：FastAPI 接口（main.py）
+    build: .    # ★用当前目录的 Dockerfile 构建
+                #   —— 原来这行指不到东西：目录里根本没有 Dockerfile，docker compose up 报
+                #      "failed to read dockerfile"。2026-09-27 补上了 Dockerfile
+    image: rag-system:1.0    # 给构建出来的镜像起个名字+版本号，方便 docker images 里认出来
+    container_name: rag-api    # 容器名固定，方便 docker ps 里认出来
     ports:    # 端口映射
-      - "8000:8000"    # ★宿主机8000 → 容器8000
+      - "8000:8000"    # ★宿主机8000 → 容器8000；浏览器打开 http://localhost:8000/docs 可点按钮测
     env_file:    # 环境变量
-      - .env    # 从.env读密钥
-    depends_on:    # 依赖
-      - chroma    # 先起chroma再起api
-  chroma:    # 服务2：向量库
-    image: ghcr.io/chroma-core/chroma:latest    # 官方镜像
-    volumes:    # ★数据卷
-      - ./chroma_data:/data    # 本地目录挂进容器（数据不丢）
+      - .env    # 从 .env 读密钥（★密钥是运行时注入的，不在镜像里，所以镜像能发给别人）
+    volumes:    # ★★ 这次补的关键一条（原来完全没有）
+      - ./chroma_data:/app/chroma_data
+      # 为什么必须挂：ingest.py 和 retriever.py 用的是嵌入版向量库
+      #   （chromadb.PersistentClient(path="./chroma_data")，这个 ./ 就是容器里的 /app），
+      #   数据实际写在容器的 /app/chroma_data 里。不挂的话有两个后果，而且都不报错：
+      #     ① 容器里是个空库 → 问什么都检索不到（跟你踩过的"上传了等于没传"同一个味道）
+      #     ② 你新入库的文档，docker compose down 一执行就全没了
+      #   挂上之后：宿主机的 chroma_data 就是数据的家，容器随便删，数据都还在
+    restart: unless-stopped    # 容器意外挂了自动重启（自己 docker compose down 停掉的除外）
+    # ★ 故意不写 healthcheck —— 这一点跟项目二不同，原因见文件末尾「这次改了什么」
+  ui:    # 服务2：Streamlit 网页界面（ui.py）
+    # ★ 原来这里是个 chroma 服务，已经删掉了 —— 理由见文件末尾，这一条面试很可能会问
+    build: .    # 用的是同一个 Dockerfile（第二次构建直接命中缓存，几秒就好）
+    image: rag-system:1.0    # ★ 跟 api 用同一个镜像名，避免重复构建出两份
+    container_name: rag-ui
+    command: streamlit run ui.py --server.port 8501 --server.address 0.0.0.0
+                # command = 覆盖 Dockerfile 里那条 CMD（那条是启动 FastAPI 的），这里改成启动网页
+                # --server.address 0.0.0.0：不写的话只有容器自己能访问，浏览器连不进来
+    ports:
+      - "8501:8501"    # 本机 8501 → 容器 8501；浏览器打开 http://localhost:8501
+    env_file:
+      - .env    # 网页里调大模型也要用 Key
+    volumes:
+      - ./chroma_data:/app/chroma_data    # ★ 网页里上传入库的文档，要落到跟 api 同一个库里
+    restart: unless-stopped
+    depends_on:    # depends_on = 启动顺序：先起 api，再起 ui
+      - api
 
 # 启动：docker compose up -d    停止：docker compose down
+# 看日志：docker compose logs -f api
+# 改了代码重新构建：docker compose up -d --build
+
+# ============================================================
+# 这次改了什么（2026-09-27）—— 四处，都是「照原样跑会出问题」的
+# ============================================================
+# ① 补了 Dockerfile。原来第 3 行写着 build: .，但 rag_system 目录里根本没有 Dockerfile，
+#    执行 docker compose up 会直接报 failed to read dockerfile。现在补上了。
+#
+# ② 给 api 和 ui 都挂上了 ./chroma_data。原来一个卷都没挂，容器里是空库：
+#    检索永远查不到东西，而且入库的文档删容器就丢。这条改完才有实用价值。
+#
+# ③ 删掉了原来的 chroma 服务，换成 ui 服务。为什么删：
+#    原来的 chroma 服务是照「教科书式架构」写的（起一个向量库服务器，应用连它），
+#    但本项目代码用的是【嵌入版】向量库 —— ingest.py 第 16 行、retriever.py 第 20 行
+#    写的都是 chromadb.PersistentClient(path="./chroma_data")，是进程内直接读写本地目录，
+#    不经过网络，也没有任何地方读 CHROMA_HOST 之类的地址。
+#    也就是说：那个 chroma 容器从头到尾没有代码连它，白占内存；
+#    而 api 服务还 depends_on: chroma，白白等它启动。
+#    ★ 面试怎么讲这条（是个加分点）：
+#      「我先按常规架构写了个独立的向量库容器，后来对着代码走了一遍链路才发现，
+#       我这个项目用的是嵌入版 Chroma，数据是进程内直接落本地磁盘的，根本没连那个服务。
+#       所以我把死服务删了、改成挂数据卷。教训是：架构图要对着代码画，不能照着印象画。」
+#    顺带说明：换成 official 的 chroma 服务不是不行，但那要改代码（改用 HttpClient 连它），
+#    对现在这个项目没有收益 —— 单机、数据量小、嵌入版更省事。
+#
+# ④ 为什么没写 healthcheck（项目二写了）：
+#    本机 Docker 引擎起不来（WSL2 没装），写了我也没有真机验证过。
+#    一个没验证过的健康检查比不写更危险：它可能一直把容器标成 unhealthy，
+#    让人以为服务坏了。所以宁可不写，等 Docker 环境起来、真跑通一次再补。
+#    ★ 这一点面试要照实说，不要含糊说「验证过了」。

@@ -1,0 +1,43 @@
+# .dockerignore —— 哪些文件【不要】拷进镜像
+# 名字固定就叫 .dockerignore（前面有个点，一个字都不能改），Docker 只认这个名字
+# 作用跟 .gitignore 一个道理，但管的是另一件事：
+#   .gitignore   管"哪些文件不传 GitHub"
+#   .dockerignore管"哪些文件不进镜像"
+# ★ 两个都要有，因为这是两条完全不同的路：上传 Git 和 打包镜像 互不相干。
+#   （本项目原来只有 .gitignore，没有 .dockerignore —— 2026-09-27 补上）
+
+
+# 【最重要的一条】密钥绝不进镜像
+# 有了这条，docker build 出来的镜像里就没有 .env，镜像可以放心发给别人；
+# 密钥是容器跑起来的时候用 docker-compose.yml 的 env_file 从外面注入的
+.env
+
+
+# 向量库数据（本机生成的，几百 MB，绝不该打进镜像）
+# ★ 为什么必须要这一条：镜像里塞一份旧向量库，会把"数据"和"程序"焊死在一起；
+#   正确的做法是靠 compose 的 volumes 把宿主机的 chroma_data 挂进容器
+chroma_data/
+
+
+# 备份和临时文件（我每次改代码前都会备份一份，这些不该进镜像）
+_备份_*/
+*.bak*
+*.bak_*
+*.py.bak*
+
+
+# Python 缓存
+__pycache__/
+*.pyc
+*.pyo
+
+
+# Git 自己的目录（进了镜像也没用，还占体积）
+.git/
+.gitignore
+
+
+# ★ 故意【不】排除的东西（写下来免得以后有人"顺手优化"掉）：
+#   sample_docs/、a.pdf、b.docx、c.txt、扫描件.png
+#   —— 这些是演示/测试用的样例文档，README 里的 curl 例子就用了 c.txt。
+#   它们体积很小，留在镜像里没坏处；排掉反而会让"照 README 敲命令"的人报一句看不懂的错。
